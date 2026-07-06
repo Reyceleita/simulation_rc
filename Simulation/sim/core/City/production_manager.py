@@ -5,6 +5,9 @@ Responsabilidad: Gestión de recursos, producción y bonificaciones.
 
 from typing import Dict, Any
 
+from sim.core.City.config.city_resource_config import CITY_RESOURCE_CONFIG
+from sim.core.resources.global_resources import RESOURCES
+
 
 class ProductionManager:
     """
@@ -15,15 +18,25 @@ class ProductionManager:
     """
 
     def __init__(self, city_type: str):
-        self.resources: Dict[str, float] = {
-            "food": 200
-        }
+        config = CITY_RESOURCE_CONFIG[city_type]
 
-        # Bonificaciones según tipo de ciudad
-        self.production_bonus = {
-            "food": 2.5 if city_type == "agricultural" else 0.8,
-            "goods": 1.5 if city_type == "industrial" else 0.7
-        }
+        self.resources = config["starting_resources"].copy()
+        
+        self.production_rates = config["production"]
+        
+        self.production_bonus = config["bonuses"]
+
+        # # Bonificaciones según tipo de ciudad
+        # if city_type == "agricultural":
+        #     self.production_bonus = {
+        #         "wheat": 2.5,
+        #         "meat": 1.4
+        #     }
+        # elif city_type == "industrial":
+        #     self.production_bonus = {
+        #         "iron": 2.2,
+        #         "tools": 1.8
+        #     }
 
     def add_resource(self, resource_type: str, amount: float) -> None:
         """Agrega recurso al almacén."""
@@ -65,3 +78,41 @@ class ProductionManager:
         actual = base_amount * bonus
         self.add_resource(resource_type, actual)
         return actual
+
+    def get_resources_by_category(self, category:str,) -> Dict[str, object]:
+        
+        result = {}
+        
+        for resource, amount in self.resources.items():
+            data = RESOURCES.get(resource)
+            
+            if data and data.category == category:
+                result[resource] = amount
+        
+        return result
+    
+    def update(self):
+        for resource, base_amount in self.production_rates.items():
+            
+            produced = self.produce(resource, base_amount)
+
+    def get_total_category_amount(self, category) -> float:
+        total = 0
+    
+        resources = self.get_resources_by_category(category)
+    
+        for amount in resources.values():
+            total += amount
+    
+        return total
+
+    def get_total_market_value(self) -> float:
+        total = 0
+
+        for resource, amount in self.resources.items():
+
+            definition = RESOURCES[resource]
+
+            total += definition.base_price * amount
+
+        return total

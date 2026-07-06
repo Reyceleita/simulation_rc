@@ -6,7 +6,7 @@ PROFESSIONS = {
         "work_hours": range(6, 17),
         "food_cost": 5,
         "stress_gain": 1.0,
-        "produces": "food",
+        "produces": "agriculture",
         "base_output": 2,
     },
     "merchant": {

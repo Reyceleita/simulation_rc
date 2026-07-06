@@ -1,225 +1,531 @@
 """
 trade_manager.py
-Responsabilidad: Lógica de comercio entre ciudades.
+
+Responsabilidad:
+- Comercio entre ciudades
+- Detección de escasez/excedente
+- Generación de rutas comerciales
+- Transferencia de recursos
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
+from sim.core.resources.global_resources import RESOURCES
+from sim.core.resources.resources_types import (
+    ResourceCategory
+)
+
+
+# =========================================================
+# DATA CLASSES
+# =========================================================
 
 @dataclass
 class TradeRoute:
-    """Representa una ruta comercial entre dos ciudades."""
-    origin: Any  # City
-    destination: Any  # City
+    """
+    Ruta comercial entre dos ciudades.
+    """
+
+    origin: Any
+    destination: Any
+
+    resource: str
+
+    amount: float
+
     profit: float
 
     def __repr__(self) -> str:
-        return f"TradeRoute({self.origin.name} -> {self.destination.name}, profit={self.profit:.2f})"
+
+        return (
+            f"TradeRoute("
+            f"{self.origin.name} -> "
+            f"{self.destination.name}, "
+            f"resource={self.resource}, "
+            f"profit={self.profit:.2f}"
+            f")"
+        )
 
 
 @dataclass
 class TradeResult:
-    """Resultado de una transacción comercial."""
+    """
+    Resultado de una operación comercial.
+    """
+
     success: bool
-    amount: int
+
+    resource: str
+
+    amount: float
+
     price: float
+
     total_cost: float
+
     message: str = ""
 
 
+# =========================================================
+# TRADE MANAGER
+# =========================================================
+
 class TradeManager:
+
     """
     Responsable de:
-    - Identificar ciudades compradoras y vendedoras
-    - Calcular rutas comerciales óptimas
-    - Ejecutar transacciones de comida
-    - Registrar operaciones comerciales
+    - Detectar necesidades
+    - Detectar excedentes
+    - Crear comercio automático
+    - Ejecutar transferencias
     """
 
-    # Constantes de configuración
-    MIN_SELLER_RATIO = 3.0
-    MAX_BUYER_RATIO = 1.5
-    MIN_PRICE_DIFF = 3.0
+    # =====================================================
+    # CONFIGURACIÓN
+    # =====================================================
+
+    MIN_RESOURCE_RATIO = 2.0
+
+    SURPLUS_THRESHOLD = 4.0
+
+    MIN_PRICE_DIFF = 1.0
+
     TRANSPORT_COST = 2.0
-    MIN_SELLER_FOOD = 20
+
     MIN_SELLER_RESERVE = 10
-    MAX_BUYER_FOOD = 150
-    MAX_TRANSFER_AMOUNT = 20
-    FOOD_PRESSURE_THRESHOLD = 50
+
+    MAX_TRANSFER_AMOUNT = 25
+
+    # Prioridad de recursos
+    RESOURCE_PRIORITY = {
+        ResourceCategory.FOOD: 10,
+        ResourceCategory.ENERGY: 9,
+        ResourceCategory.INDUSTRIAL: 7,
+        ResourceCategory.MATERIAL: 6,
+        ResourceCategory.CONSUMER: 5,
+        ResourceCategory.LUXURY: 2,
+        ResourceCategory.ILLEGAL: 1
+    }
+
+    # =====================================================
+    # INICIALIZACIÓN
+    # =====================================================
 
     def __init__(self, logger: Any):
+
         self.logger = logger
+
         self.routes: List[TradeRoute] = []
 
-    def update_trade_routes(self, cities: List[Any]) -> List[TradeRoute]:
-        """
-        Recalcula rutas comerciales basadas en diferencias de precio y presión alimentaria.
+    # =====================================================
+    # RUTAS COMERCIALES
+    # =====================================================
 
-        Args:
-            cities: Lista de ciudades
-
-        Returns:
-            Lista de rutas comerciales viables
+    def update_trade_routes(
+        self,
+        cities: List[Any]
+    ) -> List[TradeRoute]:
         """
+        Recalcula rutas comerciales.
+        """
+
         self.routes = []
 
-        for city_a in cities:
-            for city_b in cities:
-                if city_a == city_b:
-                    continue
+        for resource_name in RESOURCES.keys():
 
-                price_diff = (
-                    city_b.cost_of_life["food_price"] - 
-                    city_a.cost_of_life["food_price"]
+            for seller in cities:
+
+                seller_surplus = self.get_resource_surplus(
+                    seller,
+                    resource_name
                 )
 
-                food_pressure = max(0, self.FOOD_PRESSURE_THRESHOLD - city_b.resources["food"])
+                if seller_surplus <= 0:
+                    continue
 
-                profit = price_diff + food_pressure * 0.5
+                for buyer in cities:
 
-                if price_diff > self.MIN_PRICE_DIFF:
-                    self.routes.append(TradeRoute(city_a, city_b, profit))
+                    if seller == buyer:
+                        continue
+
+                    buyer_surplus = self.get_resource_surplus(
+                        buyer,
+                        resource_name
+                    )
+
+                    # Solo compradores con escasez
+                    if buyer_surplus >= 0:
+                        continue
+
+                    seller_price = (
+                        seller.economy.get_price(
+                            resource_name
+                        )
+                    )
+
+                    buyer_price = (
+                        buyer.economy.get_price(
+                            resource_name
+                        )
+                    )
+
+                    price_diff = (
+                        buyer_price
+                        - seller_price
+                    )
+
+                    if price_diff < self.MIN_PRICE_DIFF:
+                        continue
+
+                    amount = min(
+                        self.MAX_TRANSFER_AMOUNT,
+                        seller.resources.get(
+                            resource_name,
+                            0
+                        ) // 4
+                    )
+
+                    if amount <= 0:
+                        continue
+
+                    profit = (
+                        (price_diff * amount)
+                        - self.TRANSPORT_COST
+                    )
+
+                    self.routes.append(
+                        TradeRoute(
+                            origin=seller,
+                            destination=buyer,
+                            resource=resource_name,
+                            amount=amount,
+                            profit=profit
+                        )
+                    )
+
+        # Más rentables primero
+        self.routes.sort(
+            key=lambda r: r.profit,
+            reverse=True
+        )
 
         return self.routes
 
-    def classify_cities(self, cities: List[Any]) -> Tuple[List[Any], List[Any]]:
+    # =====================================================
+    # NECESIDADES
+    # =====================================================
+
+    def get_resource_ratio(
+        self,
+        city: Any,
+        resource_name: str
+    ) -> float:
         """
-        Clasifica ciudades en compradoras y vendedoras según ratio comida/población.
-
-        Returns:
-            Tupla (compradores, vendedores)
+        Ratio recurso/población.
         """
-        buyers = []
-        sellers = []
 
-        for city in cities:
-            ratio = self._get_food_ratio(city)
+        amount = city.resources.get(
+            resource_name,
+            0
+        )
 
-            if ratio < self.MAX_BUYER_RATIO:
-                buyers.append(city)
-            elif ratio > self.MIN_SELLER_RATIO:
-                sellers.append(city)
+        population = max(
+            1,
+            len(city.npcs)
+        )
 
-        return buyers, sellers
+        return amount / population
 
-    def _get_food_ratio(self, city: Any) -> float:
-        """Calcula ratio comida/población de una ciudad."""
-        population = max(1, len(city.npcs))
-        return city.resources["food"] / population
-
-    def find_best_seller(self, buyer: Any, sellers: List[Any]) -> Optional[Any]:
+    def get_resource_surplus(
+        self,
+        city: Any,
+        resource_name: str
+    ) -> float:
         """
-        Encuentra el mejor vendedor para una ciudad compradora.
+        Excedente o escasez.
 
-        Args:
-            buyer: Ciudad compradora
-            sellers: Lista de ciudades vendedoras candidatas
+        Positivo:
+            excedente
 
-        Returns:
-            Mejor ciudad vendedora o None
+        Negativo:
+            necesidad
         """
+
+        ratio = self.get_resource_ratio(
+            city,
+            resource_name
+        )
+
+        ideal_ratio = self.MIN_RESOURCE_RATIO
+
+        return ratio - ideal_ratio
+
+    # =====================================================
+    # VENDEDORES
+    # =====================================================
+
+    def find_best_seller(
+        self,
+        buyer: Any,
+        resource_name: str,
+        cities: List[Any]
+    ) -> Optional[Any]:
+        """
+        Encuentra mejor vendedor.
+        """
+
         best = None
+
         best_price = float("inf")
 
-        for seller in sellers:
+        for seller in cities:
+
             if seller == buyer:
                 continue
 
-            price = seller.cost_of_life["food_price"] + self.TRANSPORT_COST
+            surplus = self.get_resource_surplus(
+                seller,
+                resource_name
+            )
 
-            if price < best_price and seller.resources["food"] > self.MIN_SELLER_FOOD:
+            if surplus <= 0:
+                continue
+
+            available = seller.resources.get(
+                resource_name,
+                0
+            )
+
+            if available < self.MIN_SELLER_RESERVE:
+                continue
+
+            price = (
+                seller.economy.get_price(
+                    resource_name
+                )
+                + self.TRANSPORT_COST
+            )
+
+            if price < best_price:
+
                 best_price = price
+
                 best = seller
 
         return best
 
-    def execute_trade(self, buyer: Any, seller: Any) -> TradeResult:
+    # =====================================================
+    # COMERCIO
+    # =====================================================
+
+    def execute_trade(
+        self,
+        buyer: Any,
+        seller: Any,
+        resource_name: str
+    ) -> TradeResult:
         """
-        Ejecuta una transacción comercial de comida entre dos ciudades.
-
-        Args:
-            buyer: Ciudad compradora
-            seller: Ciudad vendedora
-
-        Returns:
-            Resultado de la transacción
+        Ejecuta transacción comercial.
         """
-        # Validaciones básicas
-        if seller.resources['food'] < self.MIN_SELLER_RESERVE:
-            return TradeResult(False, 0, 0, 0, "Vendedor sin reservas suficientes")
 
-        if buyer.resources['food'] > self.MAX_BUYER_FOOD:
-            return TradeResult(False, 0, 0, 0, "Comprador con reservas llenas")
+        seller_amount = seller.resources.get(
+            resource_name,
+            0
+        )
 
-        # Calcular cantidad a transferir
-        amount = min(self.MAX_TRANSFER_AMOUNT, seller.resources['food'] // 4)
+        if seller_amount < self.MIN_SELLER_RESERVE:
+
+            return TradeResult(
+                False,
+                resource_name,
+                0,
+                0,
+                0,
+                "Reservas insuficientes"
+            )
+
+        amount = min(
+            self.MAX_TRANSFER_AMOUNT,
+            seller_amount // 4
+        )
 
         if amount <= 0:
-            return TradeResult(False, 0, 0, 0, "Cantidad insuficiente")
 
-        # Calcular precio
-        price = seller.cost_of_life['food_price'] + self.TRANSPORT_COST
+            return TradeResult(
+                False,
+                resource_name,
+                0,
+                0,
+                0,
+                "Cantidad insuficiente"
+            )
 
-        # Verificar capacidad de pago del comprador
-        total_money = sum(n.money for n in buyer.npcs)
+        price = (
+            seller.economy.get_price(
+                resource_name
+            )
+            + self.TRANSPORT_COST
+        )
 
-        if total_money < price * amount:
-            # Comprar menos en vez de cancelar
-            amount = int(total_money / price)
-            if amount <= 0:
-                return TradeResult(False, 0, 0, 0, "Fondos insuficientes")
-
-        # Ejecutar transferencia
-        seller.resources['food'] -= amount
-        buyer.resources['food'] += amount
-
-        # Transferir dinero (distribuido entre NPCs)
         total_cost = price * amount
-        cost_per_npc = total_cost / len(buyer.npcs)
-        income_per_npc = total_cost / len(seller.npcs)
 
-        for npc in buyer.npcs:
-            npc.money -= cost_per_npc
+        buyer_money = sum(
+            npc.money
+            for npc in buyer.npcs
+        )
 
-        for npc in seller.npcs:
-            npc.money += income_per_npc
+        # Ajustar compra al dinero disponible
+        if buyer_money < total_cost:
 
-        # Registrar
-        self.logger.log(f"Comercio: {seller.name} -> {buyer.name} | {amount} comida")
+            amount = int(
+                buyer_money / price
+            )
 
-        return TradeResult(True, amount, price, total_cost)
+            total_cost = (
+                amount * price
+            )
 
-    def trade_between_cities(self, cities: List[Any]) -> List[TradeResult]:
+            if amount <= 0:
+
+                return TradeResult(
+                    False,
+                    resource_name,
+                    0,
+                    0,
+                    0,
+                    "Fondos insuficientes"
+                )
+
+        # =================================================
+        # TRANSFERENCIA
+        # =================================================
+
+        seller.consume_resource(
+            resource_name,
+            amount
+        )
+
+        buyer.add_resource(
+            resource_name,
+            amount
+        )
+
+        # =================================================
+        # DINERO
+        # =================================================
+
+        if buyer.npcs:
+
+            cost_per_npc = (
+                total_cost
+                / len(buyer.npcs)
+            )
+
+            for npc in buyer.npcs:
+                npc.money -= cost_per_npc
+
+        if seller.npcs:
+
+            income_per_npc = (
+                total_cost
+                / len(seller.npcs)
+            )
+
+            for npc in seller.npcs:
+                npc.money += income_per_npc
+
+        # =================================================
+        # REGISTRO
+        # =================================================
+
+        self.logger.log(
+            f"Comercio: "
+            f"{seller.name} -> "
+            f"{buyer.name} | "
+            f"{amount} {resource_name}"
+        )
+
+        return TradeResult(
+            success=True,
+            resource=resource_name,
+            amount=amount,
+            price=price,
+            total_cost=round(
+                total_cost,
+                2
+            )
+        )
+
+    # =====================================================
+    # CICLO GLOBAL
+    # =====================================================
+
+    def trade_between_cities(
+        self,
+        cities: List[Any]
+    ) -> List[TradeResult]:
         """
-        Ejecuta todas las transacciones comerciales posibles entre ciudades.
-
-        Args:
-            cities: Lista de ciudades
-
-        Returns:
-            Lista de resultados de transacciones
+        Ejecuta comercio global.
         """
+
         results = []
-        buyers, sellers = self.classify_cities(cities)
 
-        for buyer in buyers:
-            seller = self.find_best_seller(buyer, sellers)
+        for buyer in cities:
 
-            if not seller:
-                continue
+            for resource_name in RESOURCES.keys():
 
-            result = self.execute_trade(buyer, seller)
-            results.append(result)
+                surplus = self.get_resource_surplus(
+                    buyer,
+                    resource_name
+                )
+
+                # Solo recursos escasos
+                if surplus >= 0:
+                    continue
+
+                seller = self.find_best_seller(
+                    buyer,
+                    resource_name,
+                    cities
+                )
+
+                if not seller:
+                    continue
+
+                result = self.execute_trade(
+                    buyer,
+                    seller,
+                    resource_name
+                )
+
+                results.append(result)
 
         return results
 
+    # =====================================================
+    # DEBUG
+    # =====================================================
+
     def get_route_summary(self) -> str:
-        """Retorna resumen de rutas comerciales activas."""
+        """
+        Resumen de rutas comerciales.
+        """
+
         if not self.routes:
             return "Sin rutas comerciales activas"
 
-        lines = ["Rutas comerciales activas:"]
+        lines = [
+            "Rutas comerciales activas:"
+        ]
+
         for route in self.routes:
-            lines.append(f"  {route}")
+
+            lines.append(
+                f"  {route.origin.name} -> "
+                f"{route.destination.name} | "
+                f"{route.resource} | "
+                f"profit={route.profit:.2f}"
+            )
+
         return "\n".join(lines)

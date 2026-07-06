@@ -1,13 +1,18 @@
 from fastapi import APIRouter
-from sim.api.models.simulation_models import GlobalStatsResponse, TickResponse, TimeResponse, WorldHistoryResponse
+from sim.api.models.simulation_models import (
+    GlobalStatsResponse,
+    TickResponse,
+    TimeResponse,
+    WorldHistoryResponse,
+)
 from sim.api.models.trade_models import TradeResultResponse
 
 from sim.api.dependences import (
     get_world,
 )
-router = APIRouter(
-    tags=["Simulation"]
-)
+
+router = APIRouter(tags=["Simulation"])
+
 
 @router.get(
     "/simulation/tick",
@@ -27,7 +32,7 @@ def advance_tick():
             amount=0,
             price=0.0,
             total_cost=0.0,
-            message=f"{r.origin.name} → {r.destination.name} (profit {r.profit:.2f})"
+            message=f"{r.origin.name} → {r.destination.name} (profit {r.profit:.2f})",
         )
         for r in trade_routes
     ]
@@ -73,18 +78,29 @@ def get_time():
     response_model=GlobalStatsResponse,
     tags=["Simulación"],
     summary="Estadísticas globales",
-    description="Promedios globales de todos los NPCs en el mundo.",
+    description="Estadísticas globales del mundo.",
 )
 def get_global_stats():
+
     world = get_world()
-    avg = world.stats_tracker.calculate_global_averages(world.npcs)
+
+    stats = world.stats_tracker.calculate_global_stats(world.npcs, world.cities)
+
     return GlobalStatsResponse(
-        total_npcs=len(world.npcs),
+        total_npcs=stats.population,
         total_money=world.population_manager.get_total_money(world.npcs),
-        avg_hunger=avg.hunger,
-        avg_happiness=avg.happiness,
-        avg_stress=avg.stress,
-        avg_money=avg.money,
+        avg_money=stats.money,
+        avg_hunger=stats.hunger,
+        avg_happiness=stats.happiness,
+        avg_stress=stats.stress,
+        total_market_value=stats.total_market_value,
+        total_food=stats.total_food,
+        total_materials=stats.total_materials,
+        total_industrial=stats.total_industrial,
+        total_consumer=stats.total_consumer,
+        total_luxury=stats.total_luxury,
+        total_energy=stats.total_energy,
+        total_illegal=stats.total_illegal,
     )
 
 
@@ -93,14 +109,26 @@ def get_global_stats():
     response_model=WorldHistoryResponse,
     tags=["Simulación"],
     summary="Historial global",
-    description="Serie temporal de estadísticas globales (dinero, hambre, felicidad, estrés).",
+    description="Serie temporal de estadísticas globales.",
 )
 def get_world_history():
+
     world = get_world()
+
     history = world.get_stats_history()
+
     return WorldHistoryResponse(
         money=history.get("money", []),
         hunger=history.get("hunger", []),
         happiness=history.get("happiness", []),
         stress=history.get("stress", []),
+        population=history.get("population", []),
+        total_market_value=history.get("total_market_value", []),
+        total_food=history.get("total_food", []),
+        total_materials=history.get("total_materials", []),
+        total_industrial=history.get("total_industrial", []),
+        total_consumer=history.get("total_consumer", []),
+        total_luxury=history.get("total_luxury", []),
+        total_energy=history.get("total_energy", []),
+        total_illegal=history.get("total_illegal", []),
     )

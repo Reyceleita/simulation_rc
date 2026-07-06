@@ -80,6 +80,7 @@ class NPC:
         self._stats.clamp_all()
         self.stress += self.city.base_stress * 0.5
         self._stats.clamp_all()   # re-clamp after city stress
+        
 
     # ------------------------------------------------------------------
     # Internal helpers

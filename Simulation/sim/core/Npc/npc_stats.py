@@ -23,13 +23,14 @@ def default_schedule() -> dict:
 
 def default_inventory() -> dict:
     return {
-        "food": random.randint(1, 3),
-        "goods": 0,
+        "wheat": 2,
+        "fish": 1,
+        "meat": 0
     }
 
 
 def default_cargo() -> dict:
-    return {"food": 0}
+    return {}
 
 
 class NPCStats:

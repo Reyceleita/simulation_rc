@@ -9,7 +9,7 @@ import threading
 from typing import Dict, List
 
 from sim.core.Npc.npc import NPC
-from sim.core.City.city_refactored import City
+from sim.core.City.city import City
 from sim.generators.npc_generator import NPCGenerator
 from sim.utils.logger import Logger
 from cities import *
@@ -59,10 +59,10 @@ class World:
         ]
 
         self.city_population = {
-            "Agro": 25,
-            "Indus": 25,
-            "Comer": 25,
-            "Marginal": 25
+            "Agro": 100,
+            "Indus": 100,
+            "Comer": 100,
+            "Marginal": 100
         }
 
         # ========== NPCs ==========
@@ -119,7 +119,7 @@ class World:
         self.busy_npcs = set()
 
         # 8. Calcular y registrar estadísticas globales
-        global_stats = self.stats_tracker.calculate_global_averages(self.npcs)
+        global_stats = self.stats_tracker.calculate_global_stats(self.npcs, self.cities)
 
         with self.lock:
             self.stats_tracker.record_global_stats(global_stats)
@@ -143,6 +143,10 @@ class World:
         # 10. Actualizar ciudades
         for city in self.cities:
             city.update()
+        
+        self.stats_tracker.record_world_resources(
+            self.cities
+        )
 
         # 11. Mostrar estadísticas
         self._show_stats()

@@ -32,6 +32,5 @@ class CityResponse(BaseModel):
     population: int
     treasury: float
     resources: Dict[str, float]
-    prices: Dict[str, int]
     employment: EmploymentStatsResponse
     social_metrics: SocialMetricsResponse

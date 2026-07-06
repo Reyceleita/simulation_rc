@@ -9,11 +9,6 @@ agricultural_config = {
         "unemployed": 0.05
     },
     
-    "production": {
-        "food": 100,
-        "goods": 10,
-    },
-    
     "cost_of_life": {
         "food_price": 5,
         "rent": 8
@@ -36,10 +31,6 @@ industrial_config = {
         "trader": 0.15
     },
 
-    "production": {
-        "food": 40,
-        "goods": 100
-    },
 
     "cost_of_life": {
         "food_price": 10,
@@ -64,10 +55,6 @@ commercial_config = {
         "trader": 0.20
     },
 
-    "production": {
-        "food": 15,
-        "goods": 40
-    },
 
     "cost_of_life": {
         "food_price": 14,
@@ -91,10 +78,6 @@ marginal_config = {
         "trader":0.10
     },
 
-    "production": {
-        "food": 3,
-        "goods": 5
-    },
 
     "cost_of_life": {
         "food_price": 12,

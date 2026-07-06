@@ -6,6 +6,10 @@ All drive weights live here so tuning is centralised.
 
 import random
 
+from sim.core.resources.global_resources import RESOURCES
+from sim.core.resources.resources_types import ResourceCategory
+from sim.utils.helpers.resources_helpers import get_category_stock, get_inventory_value
+
 
 # ------------------------------------------------------------------
 # Time-block helper
@@ -53,8 +57,73 @@ def calculate_drives(npc, world) -> dict[str, float]:
     # ----------------------------------------------------------------
     # 🛒  BUY FOOD
     # ----------------------------------------------------------------
-    desired_food = 5
-    drives["buy_food"] = max(0.0, desired_food - npc.inventory["food"]) * 0.8
+    
+    food_stock = get_category_stock(
+        npc,
+        ResourceCategory.FOOD
+    )
+    
+    food_drive = max(
+    0,
+    3 - food_stock
+)
+
+    food_drive += npc.hunger / 50
+
+    food_drive *= (
+        1.0
+        - npc.personality["greed"] * 0.2
+    )
+
+    if npc.money < 20:
+        food_drive *= 0.7
+
+    drives["buy_food"] = food_drive
+
+    # ----------------------------------------------------------------
+    # 🛍️  BUY RESOURCES
+    # ----------------------------------------------------------------
+
+    need = max(
+        0,
+        (70 - npc.happiness) / 20
+    )
+    
+    wealth_factor = min(
+        2.0,
+        0.5 + npc.money / 200
+    )
+    
+    
+    drives["buy_consumer_goods"] = (
+        need *
+        wealth_factor 
+    )
+    
+    drives["buy_consumer_goods"] = min(
+        3,
+        need * wealth_factor
+    )
+    
+    # ----------------------------------------------------------------
+    # 🛍️  BUY LUXURY
+    # ----------------------------------------------------------------
+    
+    if npc.money > 50:
+
+        luxury_drive = (
+            npc.personality["impulsiveness"]
+            + npc.personality["greed"] * -0.5
+        )
+
+        luxury_drive += (
+            100 - npc.happiness
+        ) / 50
+        
+        drives["buy_luxury"] = max(
+            0,
+            luxury_drive
+        )
 
     # ----------------------------------------------------------------
     # 💼  WORK
@@ -73,6 +142,20 @@ def calculate_drives(npc, world) -> dict[str, float]:
             drives["work"] += 2
     else:
         drives["work"] = 0.0
+        
+    wealth = (
+        npc.money
+        + get_inventory_value(npc)
+    )
+    
+    if wealth < 50:
+        drives["work"] += 1
+    
+    if wealth < 20:
+        drives["work"] += 2
+    
+    if wealth < 5:
+        drives["work"] += 2
 
     # ----------------------------------------------------------------
     # 🧑‍🤝‍🧑  SOCIALIZE
@@ -88,6 +171,11 @@ def calculate_drives(npc, world) -> dict[str, float]:
     avg_relation = npc.social.average_relationship()
     drives["socialize"] += avg_relation * 0.5
     drives["socialize"] += culture["sociability"] * 0.3
+    
+    drives["socialize"] += max(
+        0,
+        avg_relation
+    ) * 0.5
 
     # ----------------------------------------------------------------
     # 😴  REST
@@ -107,27 +195,57 @@ def calculate_drives(npc, world) -> dict[str, float]:
 
 
 def _add_trader_drives(drives: dict, npc, world):
+
     best_route = None
     best_profit = 0.0
 
     for route in world.trade_manager.routes:
+
         if route.profit > best_profit:
             best_profit = route.profit
             best_route = route
 
     if not best_route:
         drives.setdefault("trade_buy", 0.0)
+        drives.setdefault("travel", 0.0)
         drives.setdefault("trade_sell", 0.0)
         return
 
     npc.trade_route = best_route
 
-    if npc.city == best_route.origin and npc.cargo["food"] == 0:
-        drives["trade_buy"] = best_profit * 1.5
-    elif npc.cargo["food"] > 0 and npc.city != best_route.destination:
-        drives["travel"] = best_profit * 2
-    elif npc.city == best_route.destination and npc.cargo["food"] > 0:
-        drives["trade_sell"] = best_profit * 2
+    resource = best_route.resource
+
+    cargo_amount = npc.cargo.get(resource, 0)
+
+    greed_bonus = 1 + npc.personality["greed"]
+    risk_bonus = 1 + npc.personality["risk"] * 0.5
+
+    # Comprar recurso en ciudad origen
+    if npc.city == best_route.origin and cargo_amount == 0:
+
+        drives["trade_buy"] = (
+            best_profit
+            * 1.5
+            * greed_bonus
+        )
+
+    # Viajar hacia destino
+    elif cargo_amount > 0 and npc.city != best_route.destination:
+
+        drives["travel"] = (
+            best_profit
+            * 2
+            * risk_bonus
+        )
+
+    # Vender recurso en destino
+    elif npc.city == best_route.destination and cargo_amount > 0:
+
+        drives["trade_sell"] = (
+            best_profit
+            * 2
+            * greed_bonus
+        )
 
 
 # ------------------------------------------------------------------

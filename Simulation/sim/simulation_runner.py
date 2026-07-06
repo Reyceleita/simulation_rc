@@ -19,7 +19,6 @@ class SimulationRunner:
         self.tick_rate = 1.0
 
     def start(self):
-        print('INICIOOOO')
 
         if self.running:
             return
@@ -39,8 +38,6 @@ class SimulationRunner:
         self.running = False
 
     def run_loop(self):
-        
-        print('Rpppn loop')
 
         while self.running:
 

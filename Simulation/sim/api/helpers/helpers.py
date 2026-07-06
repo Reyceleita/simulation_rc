@@ -27,7 +27,6 @@ def _city_to_response(city, social, employment) -> CityResponse:
         population=len(city.npcs),
         treasury=city.treasury,
         resources=city.resources,
-        prices=city.cost_of_life,
         employment=EmploymentStatsResponse(**employment),
         social_metrics=SocialMetricsResponse(
             avg_hunger=social.avg_hunger,
@@ -61,6 +60,8 @@ def _npc_to_response(npc) -> NPCResponse:
         metabolism=npc.metabolism,
         hunger_threshold=npc.hunger_threshold,
         personality=NPCPersonalityResponse(**npc.personality),
-        inventory=NPCInventoryResponse(**npc.inventory),
+        inventory=NPCInventoryResponse(
+            resources=npc.inventory
+        ),
         trade_route=trade_route_str,
     )

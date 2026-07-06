@@ -40,8 +40,7 @@ class NPCPersonalityResponse(BaseModel):
 
 
 class NPCInventoryResponse(BaseModel):
-    food: int
-    goods: int
+    resources: Dict[str, float]
 
 
 class NPCResponse(BaseModel):
