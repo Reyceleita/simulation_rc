@@ -11,22 +11,36 @@ Dependency graph:
     └── npc_actions (npc_actions.py) — action execution
 """
 
+from sim.core.Npc_AI.planner.planner import Planner
 from sim.core.Npc.npc_stats import NPCStats
 from sim.core.Npc.npc_memory import NPCMemory
 from sim.core.Npc.npc_social import NPCSocial
 from sim.snapshots.decision_snapshot import DecisionSnapshot
-from sim.core.Npc.npc_drives import select_action
-from sim.core.Npc.npc_actions import execute_action
+from sim.core.Npc_AI.npc_drives import select_action
+from sim.core.Npc_AI.npc_actions import execute_action
+from sim.core.Npc_AI.executer import update as execute_plan
 
+from collections import deque
 
 class NPC:
     def __init__(self, npc_id: int):
         self.id = npc_id
+        
+        # -----------------------------
+        # AI
+        # -----------------------------
+        
+        self.daily_plan = deque()     # Cola de acciones del día
+        self.current_action = None     # Acción en ejecución
+        self.last_plan_day = -1
 
         # --- subsystems ---
         self._stats = NPCStats()
         self.memory = NPCMemory()
         self.social = NPCSocial()
+        
+        #--------Ubicacion------------
+        self.current_location = None
 
         # Expose flat attributes expected by external code
         # (drives / actions reference npc.hunger, npc.money, etc. directly)
@@ -74,14 +88,22 @@ class NPC:
     # ------------------------------------------------------------------
 
     def update(self, world):
-        self._tick_passive()
-        self.memory.decay()
-        self._decide_and_act(world)
-        self._stats.clamp_all()
-        self.stress += self.city.base_stress * 0.5
-        self._stats.clamp_all()   # re-clamp after city stress
         
-
+        self._tick_passive()
+    
+        self.memory.decay()
+    
+        self._update_plan(world)
+    
+        execute_plan(self, world)
+    
+        self._stats.clamp_all()
+    
+        self.stress += self.city.base_stress * 0.5
+    
+        self._stats.clamp_all()
+                
+    
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -93,23 +115,19 @@ class NPC:
         self._stats.satiety = max(0, self._stats.satiety - 2)
         self._stats.happiness *= 0.995
 
-    def _decide_and_act(self, world):
-        action = select_action(self, world)
-        world.logger.log(
-            f"[Día {world.time_manager.day} Hora {world.time_manager.hour}] NPC {self.id}: {action}"
+    def _update_plan(self, world):
+        planner = Planner()
+    
+        current_day = world.time_manager.day
+    
+        if self.last_plan_day == current_day:
+            return
+    
+        self.daily_plan = planner.build(
+            self,
+            world
         )
-        execute_action(self, action, world)
-        decision = DecisionSnapshot(
-            tick=world.time_manager.tick,
-            npc_id=self.id,
-            chosen_action=action,
-            
-            hunger=self._stats.hunger,
-            energy=self._stats.energy,
-            happiness=self._stats.happiness,
-            stress=self._stats.stress,
-            
-            reason="Not defined"
-        )
-        world.decision_tracker.record(decision)
-        self.memory.record_action(action, self._stats.personality, self._stats.hunger)
+    
+        self.last_plan_day = current_day
+    
+    

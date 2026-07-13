@@ -9,6 +9,8 @@ Responsabilidad:
 
 from typing import Dict, List, Any
 
+from sim.core.City.location import Location
+from sim.core.City.location_registry import LocationType
 from sim.core.resources.resources_types import ResourceCategory
 
 from sim.core.City.economy_manager import EconomyManager
@@ -21,6 +23,29 @@ from sim.core.City.social_metrics import (
     SocialMetricsCalculator
 )
 
+CITY_POSITIONS = {
+
+    "Agro": {
+        "x": 900,
+        "y": 600,
+    },
+
+    "Indus": {
+        "x": 1280,
+        "y": 1500,
+    },
+
+    "Comer": {
+        "x": 580,
+        "y": 1200,
+    },
+
+    "Marginal": {
+        "x": 2050,
+        "y": 1345,
+    },
+
+}
 
 class City:
     """
@@ -53,6 +78,42 @@ class City:
 
         self.culture = config["culture"]
         self.base_stress = config["base_stress"]
+        self.position  = CITY_POSITIONS[self.name]
+
+        # =================================================
+        # Locaciones
+        # =================================================
+
+        self.locations = {
+        
+            LocationType.RESIDENTIAL:
+        
+                Location(
+                    "home",
+                    "Barrio",
+                    LocationType.RESIDENTIAL,
+                    {"x":250,"y":700}
+                ),
+        
+            LocationType.WORK:
+        
+                Location(
+                    "work",
+                    "Trabajo",
+                    LocationType.WORK,
+                    {"x":850,"y":220}
+                ),
+        
+            LocationType.SHOPPING:
+        
+                Location(
+                    "shop",
+                    "Mercado",
+                    LocationType.SHOPPING,
+                    {"x":600,"y":450}
+                ),
+        
+        }
 
         # =================================================
         # POBLACIÓN
@@ -92,6 +153,22 @@ class City:
     # =====================================================
     # PROPIEDADES
     # =====================================================
+    
+    
+    @property
+    def map_data(self):
+    
+        return {
+        
+            "name": self.name,
+    
+            "type": self.type,
+    
+            "population": len(self.npcs),
+    
+            "position": self.position,
+    
+        }
 
     @property
     def resources(self) -> Dict[str, float]:

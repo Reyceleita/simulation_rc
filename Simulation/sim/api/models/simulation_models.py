@@ -9,7 +9,13 @@ class TimeResponse(BaseModel):
     tick: int
     day: int
     hour: int
+    month : int
+    year: int
+    week_day : int
+    week_day_name : str
+    month_name : str
     time_string: str
+    
 
 class GlobalStatsResponse(BaseModel):
 

@@ -42,7 +42,7 @@ class World:
         self.logger = Logger()
 
         # ========== SUBSISTEMAS ==========
-        self.time_manager = TimeManager(start_hour=6, start_day=1)
+        self.time_manager = TimeManager()
         self.stats_tracker = StatsTracker()
         self.job_manager = JobManager(PROFESSIONS)
         self.trade_manager = TradeManager(self.logger)
@@ -182,3 +182,17 @@ class World:
     def get_trade_routes(self) -> List:
         """Retorna rutas comerciales activas."""
         return self.trade_manager.routes
+
+    def get_city(self, name: str):
+        """
+        Retorna una ciudad por su nombre.
+        """
+
+        for city in self.cities:
+
+            if city.name == name:
+                return city
+
+        raise ValueError(
+            f"No existe la ciudad '{name}'."
+        )

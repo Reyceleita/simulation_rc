@@ -2,6 +2,7 @@ from typing import Dict, List
 
 from fastapi import APIRouter, HTTPException
 
+from sim.api.models.map_model import CityMapResponse, LocationResponse, NPCMarkerResponse, PositionResponse
 from sim.api.dependences import (
     get_world,
 )
@@ -28,6 +29,84 @@ def list_cities():
         result.append(_city_to_response(city, social, employment))
     return result
 
+@router.get("/world/map")
+def get_world_map():
+    world = get_world()
+
+    return {
+
+        "cities": [
+
+            city.map_data
+
+            for city in world.cities
+
+        ]
+
+    }
+
+@router.get(
+
+    "/cities/{city_name}/map",
+
+    response_model=CityMapResponse
+
+)
+def get_city_map(city_name: str):
+    world = get_world()
+    city = world.get_city(city_name)
+
+    return CityMapResponse(
+
+        city=city.name,
+
+        locations=[
+
+            LocationResponse(
+
+                id=location.id,
+
+                name=location.name,
+
+                type=location.type.value,
+
+                position=PositionResponse(
+
+                    x=location.position["x"],
+
+                    y=location.position["y"]
+
+                )
+
+            )
+
+            for location
+
+            in city.locations.values()
+
+        ],
+
+        npcs=[
+
+            NPCMarkerResponse(
+
+                id=npc.id,
+
+                name=npc.name,
+
+                profession=npc.profession,
+
+                location=npc.current_location.id,
+
+            )
+
+            for npc
+
+            in city.npcs
+
+        ]
+
+    )
 
 @router.get(
     "/cities/{city_name}",

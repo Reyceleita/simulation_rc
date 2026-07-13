@@ -38,86 +38,148 @@ class NPCSocial:
     # Target selection
     # ------------------------------------------------------------------
 
-    def choose_social_target(self, self_id: int, world):
-        """
-        Pick a candidate NPC to socialize with, weighted by existing
-        relationship and impulsiveness.
-        """
-        candidates = [
-            npc for npc in world.npcs
-            if npc.id != self_id and npc.id not in world.busy_npcs
-        ]
-        if not candidates:
-            return None
+    def choose_target(self, npc, world):
 
-        impulsiveness = 0.0  # caller should pass personality["impulsiveness"]
-        weighted = []
-        for npc in candidates:
-            relation = self.relationships.get(npc.id, 0.0)
-            weight = 1.0 + relation
-            weighted.append((npc, max(0.1, weight)))
-
-        return _weighted_choice(weighted)
-
-    def choose_social_target_with_personality(
-        self, self_id: int, world, impulsiveness: float
-    ):
-        candidates = [
-            npc for npc in world.npcs
-            if npc.id != self_id and npc.id not in world.busy_npcs
-        ]
-        if not candidates:
-            return None
-
-        weighted = []
-        for npc in candidates:
-            relation = self.relationships.get(npc.id, 0.0)
-            weight = 1.0 + relation
-            if impulsiveness > 0.7:
+        candidates = []
+    
+        for other in world.npcs:
+        
+            if other.id == npc.id:
+                continue
+            
+            if other.current_action is not None:
+                continue
+            
+            relation = self.relationships.get(
+                other.id,
+                0.0
+            )
+    
+            weight = 1 + relation
+    
+            if npc.personality["impulsiveness"] > 0.7:
+            
                 weight += abs(relation) * 0.5
-            weighted.append((npc, max(0.1, weight)))
-
-        return _weighted_choice(weighted)
-
+    
+            candidates.append(
+                (
+                    other,
+                    max(weight, 0.1)
+                )
+            )
+    
+        if not candidates:
+            return None
+    
+        return _weighted_choice(candidates)
     # ------------------------------------------------------------------
     # Interaction resolution
     # ------------------------------------------------------------------
 
-    def interact(self, self_npc, other_npc, world) -> tuple[float, str]:
+    def resolve_interaction(
+        self,
+        npc,
+        target,
+        world
+    ) -> dict:
         """
-        Resolve a social interaction between two NPCs.
+        Resuelve una interacción social entre dos NPC.
 
-        Returns (relationship_change, interaction_type).
-        Side-effects: updates both NPCs' relationships, happiness, stress.
+        Se encarga de:
+            - calcular el resultado
+            - modificar relaciones
+            - modificar estados emocionales
+            - registrar memoria
+
+        Devuelve información útil para el logger.
         """
+
         compatibility = (
-            (self_npc.personality["sociability"] + other_npc.personality["sociability"]) / 2
-            + (self_npc.personality["empathy"] + other_npc.personality["empathy"]) / 2
+
+            (
+                npc.personality["sociability"]
+                + target.personality["sociability"]
+            ) / 2
+
+            +
+
+            (
+                npc.personality["empathy"]
+                + target.personality["empathy"]
+            ) / 2
+
         )
+
         outcome = compatibility + random.uniform(-0.5, 0.5)
 
         if outcome > 0.7:
-            change = 0.1
-            tipo = "amigable"
-            self_npc.happiness += 2
+
+            relationship_change = 0.10
+
+            happiness = 2
+
+            stress = 0
+
+            interaction_type = "friendly"
+
         elif outcome < 0.3:
-            change = -0.1
-            tipo = "conflicto"
-            self_npc.stress += 1
+
+            relationship_change = -0.10
+
+            happiness = 0
+
+            stress = 1
+
+            interaction_type = "conflict"
+
         else:
-            change = 0.02
-            tipo = "neutral"
 
-        # Update both sides
-        self_npc.social._apply_change(other_npc.id, change)
-        other_npc.social._apply_change(self_npc.id, change)
+            relationship_change = 0.02
 
-        world.logger.log(
-            f"   🤝 NPC {self_npc.id} → NPC {other_npc.id} | {tipo} "
-            f"({change:+.2f}) | relación: {self_npc.social.relationships[other_npc.id]:.2f}"
+            happiness = 1
+
+            stress = 0
+
+            interaction_type = "neutral"
+
+        # -------------------------
+        # Relaciones
+        # -------------------------
+
+        self._apply_change(
+            target.id,
+            relationship_change
         )
 
-        return change, tipo
+        target.social._apply_change(
+            npc.id,
+            relationship_change
+        )
+
+        # -------------------------
+        # Estados
+        # -------------------------
+
+        npc.happiness += happiness
+        target.happiness += happiness
+
+        npc.stress += stress
+        target.stress += stress
+
+        # -------------------------
+        # Memorias
+        # -------------------------
+
+        npc.memory.record_short("socialized")
+        target.memory.record_short("socialized")
+
+        return {
+
+            "type": interaction_type,
+
+            "relationship_change": relationship_change
+
+        }
 
 
 # ------------------------------------------------------------------

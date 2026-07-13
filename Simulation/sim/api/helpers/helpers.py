@@ -49,6 +49,7 @@ def _npc_to_response(npc) -> NPCResponse:
 
     return NPCResponse(
         id=npc.id,
+        name=npc.name,
         profession=npc.profession,
         city=npc.city.name if npc.city else "sin ciudad",
         money=npc.money,

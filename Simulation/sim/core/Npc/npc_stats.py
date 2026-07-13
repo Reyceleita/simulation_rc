@@ -23,9 +23,9 @@ def default_schedule() -> dict:
 
 def default_inventory() -> dict:
     return {
-        "wheat": 2,
-        "fish": 1,
-        "meat": 0
+        "wheat": 10,
+        "fish": 10,
+        "meat": 10
     }
 
 

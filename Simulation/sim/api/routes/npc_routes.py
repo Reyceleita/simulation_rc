@@ -99,7 +99,6 @@ def get_npc_decision(npc_id: int):
     world = get_world()
     response = world.decision_tracker.get_latest(npc_id)
     return NPCDecisionsResponse(
-        tick= response.tick,
         chose_action= response.chosen_action,
         energy= response.energy,
         happiness= response.happiness,

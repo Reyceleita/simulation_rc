@@ -179,7 +179,6 @@ def _work(npc, world):
         if random.random() < (raw % 1):
             produced += 1
 
-        # CORREGIDO:
         npc.city.add_resource(
             resource,
             produced

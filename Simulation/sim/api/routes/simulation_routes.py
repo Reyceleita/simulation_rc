@@ -69,6 +69,11 @@ def get_time():
         tick=tm.tick,
         day=tm.day,
         hour=tm.hour,
+        month=tm.month,
+        year=tm.year,
+        week_day=tm.week_day,
+        month_name=tm.month_name,
+        week_day_name=tm.week_day_name,
         time_string=tm.get_time_string(),
     )
 

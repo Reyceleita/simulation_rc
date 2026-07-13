@@ -45,6 +45,7 @@ class NPCInventoryResponse(BaseModel):
 
 class NPCResponse(BaseModel):
     id: int
+    name: str
     profession: str
     city: str
     money: float
