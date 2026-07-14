@@ -8,6 +8,7 @@ import random
 import threading
 from typing import Dict, List
 
+from sim.ai.managers.news_manager import NewsManager
 from sim.core.Npc.npc import NPC
 from sim.core.City.city import City
 from sim.generators.npc_generator import NPCGenerator
@@ -49,6 +50,7 @@ class World:
         self.population_manager = PopulationManager(NPCGenerator())
         self.decision_tracker = DecisionTracker()
         self.event_tracker = EventTracker()
+        self.news_manager = NewsManager(self)
 
         # ========== CIUDADES ==========
         self.cities = [
@@ -150,6 +152,9 @@ class World:
 
         # 11. Mostrar estadísticas
         self._show_stats()
+        
+        #12. Actualizar noticiero
+        self.news_manager.update()
 
     def _show_stats(self) -> None:
         """Muestra estadísticas actuales del mundo."""

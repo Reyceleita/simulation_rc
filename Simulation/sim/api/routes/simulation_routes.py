@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from sim.simulation_runner import SimulationRunner
 from sim.api.models.simulation_models import (
     GlobalStatsResponse,
     TickResponse,
@@ -137,3 +138,29 @@ def get_world_history():
         total_energy=history.get("total_energy", []),
         total_illegal=history.get("total_illegal", []),
     )
+
+@router.get("/news/latest",tags=["Simulación"],)
+def latest_news():
+
+    world = get_world()
+
+    news = world.news_manager.latest()
+
+    if news is None:
+        return None
+
+    return news.to_dict()
+
+@router.get("/news/history",tags=["Simulación"],)
+def news_history():
+
+    world = get_world()
+
+    return [
+
+        news.to_dict()
+
+        for news in world.news_manager.history()
+
+    ]
+
