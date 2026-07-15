@@ -16,7 +16,7 @@ class OllamaNewsGenerator:
 
     def __init__(
         self,
-        host="http://192.168.0.106:11434",
+        host="http://192.168.0.103:11434", #Verificar antes de iniciar
         model="llama3.1:8b"
     ):
 

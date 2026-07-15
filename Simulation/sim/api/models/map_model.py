@@ -45,6 +45,8 @@ class NPCMarkerResponse(BaseModel):
 class CityMapResponse(BaseModel):
 
     city: str
+    
+    background: str
 
     locations: list[LocationResponse]
 

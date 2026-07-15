@@ -3,7 +3,7 @@ from faker import Faker
 
 from sim.core.Npc_AI.schedules.worker import WorkerSchedule
 from sim.core.Npc.npc import NPC
-from professions import PROFESSIONS, get_random_profession
+from Simulation.sim.utils.helpers.professions import PROFESSIONS, get_random_profession
 
 # Generador de datos colombianos
 fake = Faker("es_CO")

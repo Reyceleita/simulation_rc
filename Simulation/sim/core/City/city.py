@@ -25,26 +25,161 @@ from sim.core.City.social_metrics import (
 
 CITY_POSITIONS = {
 
-    "Agro": {
+    "Lati": {
         "x": 900,
         "y": 600,
     },
 
-    "Indus": {
+    "Causland": {
         "x": 1280,
         "y": 1500,
     },
 
-    "Comer": {
+    "Solstadia": {
         "x": 580,
         "y": 1200,
     },
 
-    "Marginal": {
+    "Alokla": {
         "x": 2050,
         "y": 1345,
     },
 
+}
+
+CITY_MAP = {
+
+    "Lati": "Lati.png",
+
+    "Causland": "Causland.png",
+
+    "Solstadia": "Solstadia.png",
+
+    "Alokla": "Alokla.png",
+
+}
+
+CITY_LOCATIONS = {
+    "Lati": {
+        
+            LocationType.RESIDENTIAL:
+        
+                Location(
+                    "home",
+                    "Barrio",
+                    LocationType.RESIDENTIAL,
+                    {"x":850,"y":400}
+                ),
+        
+            LocationType.WORK:
+        
+                Location(
+                    "work",
+                    "Trabajo",
+                    LocationType.WORK,
+                    {"x":300,"y":600}
+                ),
+        
+            LocationType.SHOPPING:
+        
+                Location(
+                    "shop",
+                    "Mercado",
+                    LocationType.SHOPPING,
+                    {"x":600,"y":370}
+                ),
+        
+        },
+    "Causland": {
+        
+            LocationType.RESIDENTIAL:
+        
+                Location(
+                    "home",
+                    "Barrio",
+                    LocationType.RESIDENTIAL,
+                    {"x":300,"y":300}
+                ),
+        
+            LocationType.WORK:
+        
+                Location(
+                    "work",
+                    "Trabajo",
+                    LocationType.WORK,
+                    {"x":600,"y":750}
+                ),
+        
+            LocationType.SHOPPING:
+        
+                Location(
+                    "shop",
+                    "Mercado",
+                    LocationType.SHOPPING,
+                    {"x":700,"y":450}
+                ),
+        
+        },
+    "Solstadia": {
+        
+            LocationType.RESIDENTIAL:
+        
+                Location(
+                    "home",
+                    "Barrio",
+                    LocationType.RESIDENTIAL,
+                    {"x":550,"y":200}
+                ),
+        
+            LocationType.WORK:
+        
+                Location(
+                    "work",
+                    "Trabajo",
+                    LocationType.WORK,
+                    {"x":850,"y":550}
+                ),
+        
+            LocationType.SHOPPING:
+        
+                Location(
+                    "shop",
+                    "Mercado",
+                    LocationType.SHOPPING,
+                    {"x":550,"y":385}
+                ),
+        
+        },
+    "Alokla": {
+        
+            LocationType.RESIDENTIAL:
+        
+                Location(
+                    "home",
+                    "Barrio",
+                    LocationType.RESIDENTIAL,
+                    {"x":250,"y":400}
+                ),
+        
+            LocationType.WORK:
+        
+                Location(
+                    "work",
+                    "Trabajo",
+                    LocationType.WORK,
+                    {"x":900,"y":350}
+                ),
+        
+            LocationType.SHOPPING:
+        
+                Location(
+                    "shop",
+                    "Mercado",
+                    LocationType.SHOPPING,
+                    {"x":680,"y":450}
+                ),
+        
+        }
 }
 
 class City:
@@ -79,41 +214,13 @@ class City:
         self.culture = config["culture"]
         self.base_stress = config["base_stress"]
         self.position  = CITY_POSITIONS[self.name]
+        self.map = CITY_MAP[self.name]
 
         # =================================================
         # Locaciones
         # =================================================
 
-        self.locations = {
-        
-            LocationType.RESIDENTIAL:
-        
-                Location(
-                    "home",
-                    "Barrio",
-                    LocationType.RESIDENTIAL,
-                    {"x":250,"y":700}
-                ),
-        
-            LocationType.WORK:
-        
-                Location(
-                    "work",
-                    "Trabajo",
-                    LocationType.WORK,
-                    {"x":850,"y":220}
-                ),
-        
-            LocationType.SHOPPING:
-        
-                Location(
-                    "shop",
-                    "Mercado",
-                    LocationType.SHOPPING,
-                    {"x":600,"y":450}
-                ),
-        
-        }
+        self.locations = CITY_LOCATIONS[self.name]
 
         # =================================================
         # POBLACIÓN

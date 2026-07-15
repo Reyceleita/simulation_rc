@@ -59,6 +59,8 @@ def get_city_map(city_name: str):
     return CityMapResponse(
 
         city=city.name,
+        
+        background=city.map,
 
         locations=[
 

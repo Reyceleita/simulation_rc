@@ -13,8 +13,8 @@ from sim.core.Npc.npc import NPC
 from sim.core.City.city import City
 from sim.generators.npc_generator import NPCGenerator
 from sim.utils.logger import Logger
-from cities import *
-from professions import PROFESSIONS
+from Simulation.sim.utils.helpers.cities import *
+from Simulation.sim.utils.helpers.professions import PROFESSIONS
 
 from sim.core.World.time_manager import TimeManager
 from sim.core.World.stats_tracker import StatsTracker, NPCStatsSnapshot, GlobalStatsSnapshot
@@ -54,17 +54,17 @@ class World:
 
         # ========== CIUDADES ==========
         self.cities = [
-            City(agricultural_config, "Agro"),
-            City(industrial_config, "Indus"),
-            City(commercial_config, "Comer"),
-            City(marginal_config, "Marginal")
+            City(agricultural_config, "Lati"),
+            City(industrial_config, "Causland"),
+            City(commercial_config, "Solstadia"),
+            City(marginal_config, "Alokla")
         ]
 
         self.city_population = {
-            "Agro": 100,
-            "Indus": 100,
-            "Comer": 100,
-            "Marginal": 100
+            "Lati": 100,
+            "Causland": 100,
+            "Solstadia": 100,
+            "Alokla": 100
         }
 
         # ========== NPCs ==========
